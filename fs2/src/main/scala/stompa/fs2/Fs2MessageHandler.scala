@@ -1,4 +1,4 @@
-package fs2
+package stompa.fs2
 
 import cats.effect.Effect
 import fs2.async.mutable.Queue

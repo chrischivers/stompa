@@ -6,6 +6,7 @@ import org.scalatest.Matchers._
 import org.scalatest.{Assertion, FlatSpec, OptionValues}
 import stompa.TestFeatures.{Any, withClient}
 import stompa.fake.StubStompClient
+import stompa.fs2.Fs2MessageHandler
 import stompa.{Message, StompClient}
 import stompa.support.IOSupport._
 
