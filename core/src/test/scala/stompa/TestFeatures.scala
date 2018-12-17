@@ -1,8 +1,8 @@
 package stompa
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
-
-import cats.Monad
+import cats.effect.Sync
+import cats.effect.concurrent.Ref
+import io.circe.Encoder
 import org.scalatest.Assertion
 import stompa.fake.StubStompClient
 
@@ -12,22 +12,21 @@ object TestFeatures {
 
   object Any {
     def alpha(): String = Random.alphanumeric.filter(_.isLetter).take(30).mkString("")
-
-    def message(): Message = Message(Map(Any.alpha() -> Any.alpha()), alpha())
-
-    def topic() = Topic(alpha())
+    def int(): Int      = Random.nextInt()
+    def topic()         = Topic(alpha())
   }
 
-  def withClient[F[_]: Monad](f: StubStompClient[F] with StompClient[F] => F[Assertion])(
-      implicit evaluate: F[Assertion] => Assertion): Assertion = {
+  def withClient[F[_]: Sync, T](f: StubStompClient[F, T] with StompClient[F] => F[Assertion])(
+      implicit evaluate: F[Assertion] => Assertion,
+      encoder: Encoder[T]): Assertion = {
 
     import cats.syntax.flatMap._
     import cats.syntax.functor._
 
     evaluate(for {
-      subscribed <- Monad[F].pure(new AtomicReference[Set[(Topic, Handler[F])]](Set.empty))
-      closed     <- Monad[F].pure(new AtomicBoolean(false))
-      client = StubStompClient[F](subscribed, closed)
+      subscribed <- Ref.of[F, Set[(Topic, Handler)]](Set.empty)
+      closed     <- Ref.of[F, Boolean](false)
+      client = StubStompClient[F, T](subscribed, closed)
       result <- f(client)
     } yield result)
   }

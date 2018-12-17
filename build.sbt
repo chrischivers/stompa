@@ -5,7 +5,8 @@ name := "stompa"
 version := "0.1"
 
 val fs2Version = "0.10.2"
-val catsVersion = "1.0.1"
+val catsVersion = "1.5.0"
+val circeVersion = "0.9.3"
 val scalaTestVersion = "3.0.1"
 val scalaLoggingVersion = "3.5.0"
 
@@ -23,9 +24,14 @@ lazy val core = project
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion,
+      "org.typelevel" %% "cats-effect" % "1.1.0",
       "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.3",
-      "net.ser1" % "gozirra-client" % "0.4.1"
+      "net.ser1" % "gozirra-client" % "0.4.1",
+      "io.circe"                   %% "circe-core"    % circeVersion,
+      "io.circe"                   %% "circe-parser"    % circeVersion,
+      "io.circe"                   %% "circe-generic"    % circeVersion % "test"
+
     ),
   )
   .settings(testDependencies)
@@ -48,24 +54,6 @@ lazy val fs2 = project
   .settings(
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % fs2Version
-    )
-  )
-  .settings(testDependencies)
-  .configs(IntegrationTest)
-
-lazy val monix = project
-  .settings(name := "io.chiv")
-  .settings(moduleName := "stompa-monix")
-  .settings(kernelSettings: _*)
-  .aggregate(core)
-  .dependsOn(core)
-  .settings(Defaults.itSettings)
-  .settings(
-    internalDependencyClasspath in IntegrationTest += Attributed.blank((classDirectory in Test).value)
-  )
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.monix" %% "monix" % "3.0.0-RC1"
     )
   )
   .settings(testDependencies)

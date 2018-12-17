@@ -1,28 +1,24 @@
 package stompa
 
 import java.util
-import cats.Monad
-import cats.syntax.functor._
+
 import com.typesafe.scalalogging.StrictLogging
-import net.ser1.stomp.Listener
+import io.circe.Decoder
+import io.circe.parser._
+import net.ser1.stomp.{Listener => StompListener}
+import cats.syntax.functor._, cats.syntax.flatMap._
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import scala.util.Try
+trait Handler extends StompListener with StrictLogging
 
-trait Handler[F[_]] extends Listener with StrictLogging
-
-object BasicMessageHandler {
-  def apply[F[_]](action: Message => F[Unit])(implicit evaluate: F[Unit] => Unit) =
-    new Handler[F] {
+object Handler {
+  def apply[F[_], T, E](onSuccess: T => F[Unit], onFailure: io.circe.Error => F[Unit])(implicit decoder: Decoder[T],
+                                                                                       evaluate: F[Unit] => Unit) =
+    new Handler {
       override def message(headers: util.Map[_, _], body: String): Unit =
-        Try(headers.asInstanceOf[util.Map[String, String]].asScala.toMap)
-          .map(stringHeaders => evaluate(action(Message(stringHeaders, body))))
-          .getOrElse(logger.error(s"Unable to handle message [$headers, $body]"))
+        evaluate {
+          parse(body)
+            .flatMap(json => decoder(json.hcursor))
+            .fold(onFailure, onSuccess)
+        }
     }
-}
-
-object ListBufferMessageHandler {
-  def apply[F[_]: Monad](messageList: ListBuffer[Message])(implicit evaluate: F[Unit] => Unit) =
-    BasicMessageHandler(m => Monad[F].pure(messageList += m).void)
 }
