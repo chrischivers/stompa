@@ -7,15 +7,18 @@ import org.scalactic.TypeCheckedTripleEquals
 import org.scalatest.Matchers._
 import org.scalatest.{Assertion, FlatSpec, OptionValues}
 import stompa.TestFeatures._
-import stompa.fake.ListRefHandler
 import cats.syntax.functor._
 import cats.syntax.flatMap._
+import stompa.{Handler, MessageQueue}
 
 abstract class ClientTest[F[_]: Sync] extends FlatSpec with TypeCheckedTripleEquals with OptionValues {
 
   def evaluate[A]: F[A] => A
   implicit val evaluateUnit      = evaluate[Unit]
   implicit val evaluateAssertion = evaluate[Assertion]
+
+  def messageQueue[T]: F[MessageQueue[F, T]]
+  def queueToHandler[T](implicit decoder: Decoder[T]): MessageQueue[F, T] => Handler
 
   it should "subscribe to a topic and receive notifications for that topic (string type)" in {
 
@@ -24,11 +27,11 @@ abstract class ClientTest[F[_]: Sync] extends FlatSpec with TypeCheckedTripleEqu
 
     withClient[F, String] { client =>
       for {
-        messageList        <- Ref.of[F, List[String]](List.empty)
-        handler            <- Sync[F].delay(ListRefHandler[F, String, Unit](messageList))
+        queue              <- messageQueue[String]
+        handler            <- Sync[F].delay(queueToHandler[String].apply(queue))
         _                  <- client.subscribe(topic, handler)
         _                  <- client.publishMessage(topic, message)
-        updatedMessageList <- messageList.get
+        updatedMessageList <- queue.dequeueAll
       } yield {
         updatedMessageList should have size 1
         updatedMessageList.head should ===(message)
@@ -48,11 +51,11 @@ abstract class ClientTest[F[_]: Sync] extends FlatSpec with TypeCheckedTripleEqu
 
     withClient[F, TestType] { client =>
       for {
-        messageList        <- Ref.of(List[TestType]())
-        handler            <- Sync[F].delay(ListRefHandler[F, TestType, Unit](messageList))
+        queue              <- messageQueue[TestType]
+        handler            <- Sync[F].delay(queueToHandler[TestType].apply(queue))
         _                  <- client.subscribe(topic, handler)
         _                  <- client.publishMessage(topic, message)
-        updatedMessageList <- messageList.get
+        updatedMessageList <- queue.dequeueAll
       } yield {
         updatedMessageList should have size 1
         updatedMessageList.head should ===(message)
@@ -64,11 +67,11 @@ abstract class ClientTest[F[_]: Sync] extends FlatSpec with TypeCheckedTripleEqu
 
     withClient[F, String] { client =>
       for {
-        messageList        <- Ref.of(List[String]())
-        handler            <- Sync[F].delay(ListRefHandler[F, String, Unit](messageList))
+        queue              <- messageQueue[String]
+        handler            <- Sync[F].delay(queueToHandler[String].apply(queue))
         _                  <- client.subscribe(Any.topic(), handler)
         _                  <- client.publishMessage(Any.topic(), Any.alpha())
-        updatedMessageList <- messageList.get
+        updatedMessageList <- queue.dequeueAll
       } yield {
         updatedMessageList should have size 0
       }
@@ -81,16 +84,15 @@ abstract class ClientTest[F[_]: Sync] extends FlatSpec with TypeCheckedTripleEqu
 
     withClient[F, String] { client =>
       for {
-        messageList        <- Ref.of(List[String]())
-        handler            <- Sync[F].delay(ListRefHandler[F, String, Unit](messageList))
+        queue              <- messageQueue[String]
+        handler            <- Sync[F].delay(queueToHandler[String].apply(queue))
         _                  <- client.subscribe(topic, handler)
         _                  <- client.publishMessage(topic, Any.alpha())
         _                  <- client.disconnect()
         isClosed           <- client.isClosed()
-        _                  <- messageList.get.map(_ should have size 1)
         _                  <- Sync[F].delay(isClosed shouldBe true)
         _                  <- client.publishMessage(Any.topic(), Any.alpha())
-        updatedMessageList <- messageList.get
+        updatedMessageList <- queue.dequeueAll
       } yield {
         updatedMessageList should have size 1
       }

@@ -1,14 +1,14 @@
 package stompa.fake
 
 import java.util
-
 import cats.effect.Sync
 import cats.effect.concurrent.Ref
-import cats.instances.list._
 import cats.syntax.flatMap._
-import cats.syntax.traverse._
 import io.circe.Encoder
 import stompa.{Handler, StompClient, Topic}
+import cats.instances.list._
+import cats.syntax.functor._
+import cats.syntax.traverse._
 
 import scala.collection.JavaConverters._
 

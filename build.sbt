@@ -4,9 +4,10 @@ name := "stompa"
 
 version := "0.1"
 
-val fs2Version = "0.10.2"
+val fs2Version = "1.0.2"
 val catsVersion = "1.5.0"
-val circeVersion = "0.9.3"
+val catsEffectVersion = "1.1.0"
+val circeVersion = "0.10.1"
 val scalaTestVersion = "3.0.1"
 val scalaLoggingVersion = "3.5.0"
 
@@ -24,7 +25,7 @@ lazy val core = project
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion,
-      "org.typelevel" %% "cats-effect" % "1.1.0",
+      "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "net.ser1" % "gozirra-client" % "0.4.1",
